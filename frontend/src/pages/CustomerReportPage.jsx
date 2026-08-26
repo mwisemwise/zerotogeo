@@ -337,6 +337,20 @@ function CategoryExpandable({ category }) {
   const [expanded, setExpanded] = useState(false)
   const { display_name, explanation, issue_count, findings } = category
 
+  // Short definitions for each category (shown in header)
+  const SHORT_DEFS = {
+    crawlability: 'Can search & AI crawl and index',
+    clarity: 'Can search & AI understand who, what, where',
+    content: 'Does the site answer real questions',
+    credibility: 'Can trust & authority be verified',
+  }
+
+  const shortDef = SHORT_DEFS[category.category] || explanation
+
+  // Group findings by their core problem (customer_finding is the problem statement)
+  // Multiple technical findings that point to the same problem get grouped as evidence
+  const groupedProblems = groupFindingsIntoProblems(findings)
+
   return (
     <div className="fivecs__category">
       <button
@@ -347,10 +361,11 @@ function CategoryExpandable({ category }) {
       >
         <div className="fivecs__category-info">
           <h3 className="fivecs__category-name">{display_name}</h3>
-          <span className="fivecs__category-count">
-            {issue_count} {issue_count === 1 ? 'issue' : 'issues'} found
-          </span>
+          <span className="fivecs__category-def">{shortDef}</span>
         </div>
+        <span className="fivecs__category-count">
+          {groupedProblems.length} {groupedProblems.length === 1 ? 'problem' : 'problems'}
+        </span>
         <span className={`fivecs__chevron${expanded ? ' fivecs__chevron--open' : ''}`} aria-hidden="true">
           ▸
         </span>
@@ -358,20 +373,85 @@ function CategoryExpandable({ category }) {
 
       {expanded && (
         <div className="fivecs__category-body" id={`category-${category.category}`}>
-          <p className="fivecs__category-explanation">{explanation}</p>
-
-          {findings.length === 0 ? (
-            <p className="fivecs__no-issues">No issues identified in this area.</p>
+          {groupedProblems.length === 0 ? (
+            <p className="fivecs__no-issues">No problems identified in this area.</p>
           ) : (
             <div className="fivecs__findings">
-              {findings.map(finding => (
-                <FindingExpandable key={finding.id} finding={finding} />
+              {groupedProblems.map((problem, index) => (
+                <ProblemExpandable key={problem.id} problem={problem} index={index + 1} />
               ))}
             </div>
           )}
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * Group multiple findings into single problems with evidence.
+ * If findings share a similar root cause, they become evidence under one problem.
+ * Otherwise each finding is its own problem with its evidence field as evidence items.
+ */
+function groupFindingsIntoProblems(findings) {
+  // For now, each finding becomes a problem, and its evidence field
+  // contains the supporting proof. The evidence string gets split into
+  // individual evidence items if it contains multiple sentences/lines.
+  return findings.map(f => ({
+    id: f.id,
+    problem: f.customer_finding,
+    severity: f.severity,
+    evidence: splitEvidence(f.evidence),
+    recommended_fix: f.recommended_fix,
+  }))
+}
+
+/**
+ * Split evidence text into individual evidence items.
+ * Splits on newlines, semicolons, or numbered patterns.
+ */
+function splitEvidence(evidenceText) {
+  if (!evidenceText) return []
+  // Split on newlines or semicolons
+  const items = evidenceText
+    .split(/[;\n]/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0)
+  return items
+}
+
+function ProblemExpandable({ problem, index }) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <article className={`finding finding--${problem.severity}`}>
+      <button
+        className="finding__toggle"
+        onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
+      >
+        <span className="finding__title">{index}. {problem.problem}</span>
+        <span className={`finding__severity finding__severity--${problem.severity}`}>
+          {problem.severity}
+        </span>
+      </button>
+
+      {expanded && (
+        <div className="finding__body">
+          {/* EVIDENCE — proof from credible sources */}
+          {problem.evidence.length > 0 && (
+            <div className="finding__section">
+              <strong className="finding__label">EVIDENCE</strong>
+              <ol className="finding__evidence-list">
+                {problem.evidence.map((item, i) => (
+                  <li key={i} className="finding__evidence-item">{item}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </div>
+      )}
+    </article>
   )
 }
 
@@ -388,9 +468,7 @@ function ConfidenceExpandable({ confidence }) {
       >
         <div className="fivecs__category-info">
           <h3 className="fivecs__category-name">CONFIDENCE</h3>
-          <span className="fivecs__category-count">
-            Summary of what is currently hurting your business
-          </span>
+          <span className="fivecs__category-def">The result of all four categories combined</span>
         </div>
         <span className={`fivecs__chevron${expanded ? ' fivecs__chevron--open' : ''}`} aria-hidden="true">
           ▸
@@ -399,8 +477,6 @@ function ConfidenceExpandable({ confidence }) {
 
       {expanded && (
         <div className="fivecs__category-body" id="category-confidence">
-          <p className="fivecs__category-explanation">{confidence.explanation}</p>
-
           <div className="confidence__summary">
             <h4 className="confidence__heading">WHAT IS HURTING YOUR CONFIDENCE?</h4>
             <p className="confidence__text">{confidence.summary}</p>
@@ -423,108 +499,6 @@ function ConfidenceExpandable({ confidence }) {
 // ---------------------------------------------------------------------------
 // Individual Finding (Expandable)
 // ---------------------------------------------------------------------------
-
-function FindingExpandable({ finding }) {
-  const [expanded, setExpanded] = useState(false)
-  const [status, setStatus] = useState(finding.status)
-  const [updating, setUpdating] = useState(false)
-
-  async function handleStatusChange(newStatus) {
-    setUpdating(true)
-    try {
-      await updateFindingStatus(finding.id, newStatus)
-      setStatus(newStatus)
-    } catch {
-      // Silently fail — could add toast notification
-    } finally {
-      setUpdating(false)
-    }
-  }
-
-  return (
-    <article className={`finding finding--${finding.severity}`}>
-      <button
-        className="finding__toggle"
-        onClick={() => setExpanded(!expanded)}
-        aria-expanded={expanded}
-      >
-        <span className="finding__title">{finding.customer_finding}</span>
-        <div className="finding__meta">
-          <span className={`finding__severity finding__severity--${finding.severity}`}>
-            {finding.severity}
-          </span>
-          <span className={`finding__status finding__status--${status}`}>
-            {status}
-          </span>
-        </div>
-      </button>
-
-      {expanded && (
-        <div className="finding__body">
-          {/* EVIDENCE */}
-          <div className="finding__section">
-            <strong className="finding__label">EVIDENCE</strong>
-            <p className="finding__text">{finding.evidence}</p>
-          </div>
-
-          {/* AFFECTED PAGE */}
-          {finding.affected_page && (
-            <div className="finding__section">
-              <strong className="finding__label">AFFECTED PAGE</strong>
-              <p className="finding__url">{finding.affected_page}</p>
-            </div>
-          )}
-
-          {/* WHY IT MATTERS */}
-          <div className="finding__section">
-            <strong className="finding__label">WHY IT MATTERS</strong>
-            <p className="finding__text">
-              This issue affects how easily Google and AI systems can work with
-              your website, which impacts your visibility and position.
-            </p>
-          </div>
-
-          {/* WHAT CAN BE FIXED */}
-          {finding.recommended_fix && (
-            <div className="finding__section">
-              <strong className="finding__label">WHAT CAN BE FIXED</strong>
-              <p className="finding__text">{finding.recommended_fix}</p>
-            </div>
-          )}
-
-          {/* VALIDATION STATUS */}
-          <div className="finding__validation">
-            <strong className="finding__label">STATUS</strong>
-            <div className="finding__status-controls">
-              <button
-                className={`finding__status-btn${status === 'open' ? ' finding__status-btn--active' : ''}`}
-                onClick={() => handleStatusChange('open')}
-                disabled={updating || status === 'open'}
-              >
-                Open
-              </button>
-              <button
-                className={`finding__status-btn${status === 'fixed' ? ' finding__status-btn--active' : ''}`}
-                onClick={() => handleStatusChange('fixed')}
-                disabled={updating || status === 'fixed'}
-              >
-                Fixed
-              </button>
-              <button
-                className={`finding__status-btn${status === 'verified' ? ' finding__status-btn--active' : ''}`}
-                onClick={() => handleStatusChange('verified')}
-                disabled={updating || status === 'verified'}
-              >
-                Verified
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </article>
-  )
-}
-
 
 // ---------------------------------------------------------------------------
 // COMPETITIVE COMPARISON

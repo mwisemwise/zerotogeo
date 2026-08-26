@@ -247,6 +247,17 @@
 .fivecs__category-count {
   font-size: 0.85rem;
   color: var(--color-text-muted);
+  background: rgba(136, 136, 170, 0.1);
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fivecs__category-def {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  font-style: italic;
 }
 
 .fivecs__chevron {
@@ -452,48 +463,53 @@
   word-break: break-all;
 }
 
-/* Validation status controls */
-.finding__validation {
-  margin-top: 1.25rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--color-border);
-}
-
-.finding__status-controls {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.finding__status-btn {
-  padding: 0.4rem 0.8rem;
+.finding__source {
   font-size: 0.75rem;
-  font-weight: 600;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
   color: var(--color-text-muted);
-  cursor: pointer;
-  transition: all 0.15s ease;
+  margin-top: 0.4rem;
+  font-style: italic;
 }
 
-.finding__status-btn:hover:not(:disabled) {
-  background: rgba(108, 99, 255, 0.08);
-  border-color: rgba(108, 99, 255, 0.3);
-  color: var(--color-accent);
+.finding__evidence-list {
+  margin: 0;
+  padding: 0 0 0 1.25rem;
+  list-style: decimal;
 }
 
-.finding__status-btn--active {
-  background: rgba(108, 99, 255, 0.12);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
+.finding__evidence-item {
+  font-size: 0.85rem;
+  color: var(--color-text);
+  line-height: 1.6;
+  padding: 0.3rem 0;
 }
 
-.finding__status-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+/* Visibility Impact */
+.finding__impact {
+  background: rgba(108, 99, 255, 0.04);
+  border: 1px solid rgba(108, 99, 255, 0.12);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  margin-top: 1rem;
 }
 
+.finding__impact-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.finding__impact-loss {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-error);
+}
+
+.finding__impact-gain {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-success);
+}
 
 /* ===========================================================================
    COMPETITIVE COMPARISON
