@@ -16,6 +16,9 @@ from app.config import settings
 from app.database import init_db
 from app.api.health import router as health_router
 from app.api.audits import router as audits_router
+from app.api.bulk import router as bulk_router
+from app.api.businesses import router as businesses_router
+from app.api.customer_report import router as customer_report_router
 
 # Path to the frontend build
 FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
@@ -59,6 +62,9 @@ def create_app() -> FastAPI:
     # ---- Routers ----
     app.include_router(health_router, prefix="/api")
     app.include_router(audits_router, prefix="/api/audits", tags=["audits"])
+    app.include_router(bulk_router, prefix="/api/bulk", tags=["bulk"])
+    app.include_router(businesses_router, prefix="/api/businesses", tags=["businesses"])
+    app.include_router(customer_report_router, prefix="/api/customer-report", tags=["customer-report"])
 
     # ---- Frontend static files ----
     if FRONTEND_DIST.exists():

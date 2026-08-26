@@ -3,9 +3,97 @@ import { useParams, Link } from 'react-router-dom'
 import { getAuditReport } from '../services/api.js'
 import './AuditReportPage.css'
 
+// ---------------------------------------------------------------------------
+// Category mapping — maps pillars to presentation categories
+// ---------------------------------------------------------------------------
+
+const CATEGORY_CONFIG = {
+  credibility: {
+    key: 'credibility',
+    label: 'Credibility',
+    description: 'Consumer confidence and trust signals',
+    pillars: ['authority'],
+  },
+  visibility: {
+    key: 'visibility',
+    label: 'Visibility',
+    description: 'Local search and AI visibility signals',
+    pillars: ['local_signals'],
+  },
+  ai_readiness: {
+    key: 'ai_readiness',
+    label: 'AI / Entity Readiness',
+    description: 'How clearly AI systems can identify and cite this business',
+    pillars: ['entity_clarity', 'citation_readiness'],
+  },
+  technical: {
+    key: 'technical',
+    label: 'Website / Technical',
+    description: 'Structured data and technical website signals',
+    pillars: ['structured_data'],
+  },
+  content: {
+    key: 'content',
+    label: 'Content / Answerability',
+    description: 'Whether AI systems can extract useful answers from this site',
+    pillars: ['content'],
+  },
+}
+
+// Reverse map: pillar → category key
+const PILLAR_TO_CATEGORY = {}
+for (const [catKey, config] of Object.entries(CATEGORY_CONFIG)) {
+  for (const pillar of config.pillars) {
+    PILLAR_TO_CATEGORY[pillar] = catKey
+  }
+}
+
 function classificationCssKey(classification) {
   return classification.toLowerCase().replace(/\s+/g, '-')
 }
+
+function groupFindingsByCategory(findings, pillarResults) {
+  const categories = {}
+
+  // Initialize all categories
+  for (const [key, config] of Object.entries(CATEGORY_CONFIG)) {
+    categories[key] = {
+      ...config,
+      problems: [],
+      strengths: [],
+      score: null,
+    }
+  }
+
+  // Calculate average score per category from pillar results
+  if (pillarResults?.length > 0) {
+    for (const [key, config] of Object.entries(CATEGORY_CONFIG)) {
+      const relevantPillars = pillarResults.filter(p => config.pillars.includes(p.pillar))
+      if (relevantPillars.length > 0) {
+        const avg = relevantPillars.reduce((sum, p) => sum + p.score, 0) / relevantPillars.length
+        categories[key].score = Math.round(avg)
+      }
+    }
+  }
+
+  // Sort findings into categories
+  for (const finding of (findings || [])) {
+    const catKey = PILLAR_TO_CATEGORY[finding.pillar] || 'technical'
+    if (!categories[catKey]) continue
+
+    if (finding.severity === 'positive') {
+      categories[catKey].strengths.push(finding)
+    } else {
+      categories[catKey].problems.push(finding)
+    }
+  }
+
+  return categories
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
 
 export default function AuditReportPage() {
   const { auditId } = useParams()
@@ -59,14 +147,16 @@ export default function AuditReportPage() {
     summary,
     pillar_results,
     findings,
-    action_plan,
   } = report
 
   const cssClass = classificationCssKey(classification)
+  const categories = groupFindingsByCategory(findings, pillar_results)
 
-  // Separate strengths from problems
-  const problems = (findings || []).filter(f => f.severity !== 'positive')
-  const strengths = (findings || []).filter(f => f.severity === 'positive')
+  // Collect all positive findings across categories
+  const allStrengths = Object.values(categories).flatMap(cat => cat.strengths)
+
+  // Categories with problems (for display)
+  const categoriesWithProblems = Object.values(categories).filter(cat => cat.problems.length > 0)
 
   return (
     <main className="report">
@@ -76,8 +166,8 @@ export default function AuditReportPage() {
           <Link to="/audit/new" className="btn btn--secondary">New Audit</Link>
         </header>
 
-        {/* GEO Score */}
-        <section className="report__score-section" aria-label="GEO Score">
+        {/* GEO Percentile */}
+        <section className="report__score-section" aria-label="GEO Percentile">
           <ScoreCircle score={overall_score} cssClass={cssClass} />
           <h1 className="report__score-classification">{classification}</h1>
           <p className="report__score-business">
@@ -94,10 +184,10 @@ export default function AuditReportPage() {
           </section>
         )}
 
-        {/* Pillar Scores */}
+        {/* Pillar Percentiles */}
         {pillar_results?.length > 0 && (
-          <section className="report__section" aria-label="Pillar Scores">
-            <h2 className="report__section-title">GEO Pillar Scores</h2>
+          <section className="report__section" aria-label="Pillar Percentiles">
+            <h2 className="report__section-title">GEO Pillar Percentiles</h2>
             <div className="report__pillar-grid">
               {pillar_results.map(pillar => (
                 <PillarCard key={pillar.pillar} pillar={pillar} />
@@ -106,31 +196,27 @@ export default function AuditReportPage() {
           </section>
         )}
 
-        {/* Top Problems */}
-        {problems.length > 0 && (
-          <section className="report__section" aria-label="Top Problems">
-            <h2 className="report__section-title">Top Problems</h2>
-            {problems.slice(0, 10).map((finding, i) => (
-              <FindingCard key={finding.id || i} finding={finding} />
-            ))}
+        {/* Grouped Findings by Category */}
+        {categoriesWithProblems.length > 0 && (
+          <section className="report__section" aria-label="Opportunities">
+            <h2 className="report__section-title">Opportunities for Improvement</h2>
+            <div className="report__categories">
+              {categoriesWithProblems.map(cat => (
+                <CategoryGroup key={cat.key} category={cat} />
+              ))}
+            </div>
           </section>
         )}
 
-        {/* Strengths */}
-        {strengths.length > 0 && (
-          <section className="report__section" aria-label="Top Strengths">
-            <h2 className="report__section-title">Top Strengths</h2>
-            {strengths.map((finding, i) => (
-              <FindingCard key={finding.id || i} finding={finding} />
-            ))}
-          </section>
-        )}
-
-        {/* Action Plan */}
-        {action_plan?.length > 0 && (
-          <section className="report__section" aria-label="Action Plan">
-            <h2 className="report__section-title">Action Plan</h2>
-            <ActionPlanList items={action_plan} />
+        {/* What You're Doing Well */}
+        {allStrengths.length > 0 && (
+          <section className="report__section" aria-label="Strengths">
+            <h2 className="report__section-title">What You're Doing Well</h2>
+            <div className="report__strengths-grid">
+              {allStrengths.map((finding, i) => (
+                <StrengthCard key={finding.id || i} finding={finding} />
+              ))}
+            </div>
           </section>
         )}
 
@@ -148,15 +234,23 @@ export default function AuditReportPage() {
 // ---------------------------------------------------------------------------
 
 function ScoreCircle({ score, cssClass }) {
+  const percentile = Math.round(score)
   return (
     <div className={`report__score-circle report__score-circle--${cssClass}`}>
-      <span className="report__score-number">{Math.round(score)}</span>
-      <span className="report__score-max">/100</span>
+      <span className="report__score-number">{percentile}<sup className="report__score-th">{getOrdinalSuffix(percentile)}</sup></span>
+      <span className="report__score-max">percentile</span>
     </div>
   )
 }
 
+function getOrdinalSuffix(n) {
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return s[(v - 20) % 10] || s[v] || s[0]
+}
+
 function PillarCard({ pillar }) {
+  const percentile = Math.round(pillar.score)
   const scoreClass =
     pillar.score >= 75 ? 'strong' :
     pillar.score >= 60 ? 'good' :
@@ -166,14 +260,15 @@ function PillarCard({ pillar }) {
     <div className="report__pillar-card">
       <div className="report__pillar-name">{pillar.pillar_display || pillar.pillar}</div>
       <div className={`report__pillar-score report__pillar-score--${scoreClass}`}>
-        {Math.round(pillar.score)}
+        {percentile}<sup className="report__pillar-th">{getOrdinalSuffix(percentile)}</sup>
+        <span className="report__pillar-percentile-label"> percentile</span>
       </div>
       <div className="report__pillar-bar">
         <div
           className={`report__pillar-bar-fill report__pillar-bar-fill--${scoreClass}`}
           style={{ width: `${Math.min(100, pillar.score)}%` }}
           role="progressbar"
-          aria-valuenow={Math.round(pillar.score)}
+          aria-valuenow={percentile}
           aria-valuemin="0"
           aria-valuemax="100"
         />
@@ -185,44 +280,126 @@ function PillarCard({ pillar }) {
   )
 }
 
-function FindingCard({ finding }) {
+function CategoryGroup({ category }) {
+  const [expanded, setExpanded] = useState(false)
+  const { label, description, score, problems } = category
+
+  const scoreClass =
+    score === null ? '' :
+    score >= 75 ? 'strong' :
+    score >= 60 ? 'good' :
+    score >= 40 ? 'needs-work' : 'poor'
+
   return (
-    <article className={`report__finding report__finding--${finding.severity}`}>
-      <div className="report__finding-header">
-        <h3 className="report__finding-title">{finding.title}</h3>
-        <span className={`report__finding-severity report__finding-severity--${finding.severity}`}>
-          {finding.severity}
-        </span>
-      </div>
-      <p className="report__finding-text">{finding.finding}</p>
-      {finding.evidence && (
-        <div className="report__finding-evidence">
-          <strong>Evidence:</strong> {finding.evidence}
+    <div className="report__category">
+      <button
+        className="report__category-header"
+        onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
+        aria-controls={`category-${category.key}`}
+      >
+        <div className="report__category-info">
+          <h3 className="report__category-label">{label}</h3>
+          <p className="report__category-desc">{description}</p>
+        </div>
+        <div className="report__category-meta">
+          {score !== null && (
+            <span className={`report__category-score report__category-score--${scoreClass}`}>
+              {score}{getOrdinalSuffix(score)} percentile
+            </span>
+          )}
+          <span className="report__category-count">
+            {problems.length} {problems.length === 1 ? 'issue' : 'issues'}
+          </span>
+          <span className={`report__category-chevron${expanded ? ' report__category-chevron--open' : ''}`} aria-hidden="true">
+            ▸
+          </span>
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="report__category-findings" id={`category-${category.key}`}>
+          {problems.map((finding, i) => (
+            <FindingCard key={finding.id || i} finding={finding} />
+          ))}
         </div>
       )}
-      {finding.recommendation && (
-        <p className="report__finding-recommendation">
-          <strong>↗ Recommendation:</strong> {finding.recommendation}
-        </p>
+    </div>
+  )
+}
+
+function FindingCard({ finding }) {
+  const [expanded, setExpanded] = useState(false)
+  const [showRec, setShowRec] = useState(false)
+
+  return (
+    <article className={`report__finding report__finding--${finding.severity}`}>
+      <button
+        className="report__finding-toggle"
+        onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
+      >
+        <div className="report__finding-header">
+          <h4 className="report__finding-title">{finding.title}</h4>
+          <span className={`report__finding-severity report__finding-severity--${finding.severity}`}>
+            {finding.severity}
+          </span>
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="report__finding-body">
+          {/* Why this matters */}
+          <div className="report__finding-section">
+            <strong className="report__finding-label">Why this matters</strong>
+            <p className="report__finding-text">{finding.finding}</p>
+          </div>
+
+          {/* Evidence — only when present */}
+          {finding.evidence && (
+            <div className="report__finding-section">
+              <strong className="report__finding-label">Evidence</strong>
+              <div className="report__finding-evidence">
+                {finding.evidence}
+              </div>
+            </div>
+          )}
+
+          {/* Recommendation — collapsed behind a button */}
+          {finding.recommendation && (
+            <div className="report__finding-section">
+              {!showRec ? (
+                <button
+                  className="report__finding-rec-btn"
+                  onClick={() => setShowRec(true)}
+                >
+                  View Recommended Action
+                </button>
+              ) : (
+                <div className="report__finding-rec">
+                  <strong className="report__finding-label">Recommended Action</strong>
+                  <p className="report__finding-rec-text">{finding.recommendation}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
     </article>
   )
 }
 
-function ActionPlanList({ items }) {
+function StrengthCard({ finding }) {
   return (
-    <ol className="report__action-list">
-      {items.map((action, i) => (
-        <li key={i} className="report__action-item">
-          <span className={`report__action-priority report__action-priority--${action.priority.toLowerCase()}`}>
-            {action.priority}
-          </span>
-          <div className="report__action-content">
-            <span className="report__action-text">{action.description}</span>
-            <span className="report__action-pillar">{action.pillar_display}</span>
-          </div>
-        </li>
-      ))}
-    </ol>
+    <article className="report__strength">
+      <div className="report__strength-icon" aria-hidden="true">✓</div>
+      <div className="report__strength-content">
+        <h4 className="report__strength-title">{finding.title}</h4>
+        <p className="report__strength-text">{finding.finding}</p>
+        {finding.evidence && (
+          <div className="report__strength-evidence">{finding.evidence}</div>
+        )}
+      </div>
+    </article>
   )
 }

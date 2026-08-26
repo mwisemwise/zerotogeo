@@ -1,0 +1,238 @@
+/* Business Detail Page Styles */
+
+.business-detail {
+  min-height: 100vh;
+  padding: 2rem 0 4rem;
+}
+
+.business-detail__header {
+  padding: 1rem 0 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.business-detail__logo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  letter-spacing: -0.02em;
+}
+
+.business-detail__logo span {
+  color: var(--color-accent);
+}
+
+.business-detail__back {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.business-detail__back:hover {
+  color: var(--color-accent-hover);
+  text-decoration: underline;
+}
+
+.business-detail__card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem;
+}
+
+/* Info Row */
+.business-detail__info-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.business-detail__name {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.75rem;
+}
+
+.business-detail__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: center;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.business-detail__website {
+  color: var(--color-accent);
+  font-weight: 500;
+}
+
+.business-detail__website:hover {
+  color: var(--color-accent-hover);
+}
+
+.business-detail__location,
+.business-detail__category {
+  color: var(--color-text-muted);
+}
+
+/* States */
+.business-detail__loading {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+}
+
+.business-detail__error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius);
+  color: var(--color-error);
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Latest Audit */
+.business-detail__latest {
+  margin-bottom: 2rem;
+}
+
+.business-detail__section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--color-text);
+}
+
+.business-detail__latest-card {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  flex-wrap: wrap;
+}
+
+.business-detail__latest-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 60px;
+}
+
+.business-detail__score-value {
+  font-size: 2rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-success));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.2;
+}
+
+.business-detail__score-value--na {
+  background: none;
+  -webkit-text-fill-color: var(--color-text-muted);
+  color: var(--color-text-muted);
+}
+
+.business-detail__score-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.business-detail__latest-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+}
+
+.business-detail__latest-date {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+/* Audit History */
+.business-detail__history {
+  border-top: 1px solid var(--color-border);
+  padding-top: 2rem;
+}
+
+.business-detail__no-audits {
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  padding: 1.5rem 0;
+}
+
+.business-detail__history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.business-detail__history-item {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  flex-wrap: wrap;
+}
+
+.business-detail__history-date {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  min-width: 150px;
+}
+
+.business-detail__history-score {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  min-width: 80px;
+}
+
+.business-detail__history-error {
+  font-size: 0.8rem;
+  color: var(--color-error);
+  cursor: help;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .business-detail__info-row {
+    flex-direction: column;
+  }
+
+  .business-detail__card {
+    padding: 1.5rem;
+  }
+
+  .business-detail__latest-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .business-detail__history-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}

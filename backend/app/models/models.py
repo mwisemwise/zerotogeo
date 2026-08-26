@@ -207,6 +207,65 @@ class Finding(Base):
 
 
 # ---------------------------------------------------------------------------
+# Batch (for bulk CSV uploads)
+# ---------------------------------------------------------------------------
+
+class Batch(Base):
+    """
+    Represents a bulk CSV upload containing multiple audits.
+
+    status lifecycle:
+      processing → complete → failed (if all fail)
+    """
+    __tablename__ = "batch"
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    total_audits = Column(Float, nullable=False, default=0)
+    completed_audits = Column(Float, nullable=False, default=0)
+    failed_audits = Column(Float, nullable=False, default=0)
+    status = Column(String, nullable=False, default="processing")
+    created_at = Column(String, nullable=False, default=_now_utc)
+    completed_at = Column(String, nullable=True)
+
+    # Relationships
+    audit_batches = relationship(
+        "AuditBatch",
+        back_populates="batch",
+        cascade="all, delete-orphan",
+        lazy="select",
+    )
+
+    def __repr__(self) -> str:
+        return f"<Batch id={self.id!r} status={self.status!r}>"
+
+
+class AuditBatch(Base):
+    """Links an audit to a batch."""
+    __tablename__ = "audit_batch"
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    batch_id = Column(
+        String,
+        ForeignKey("batch.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    audit_id = Column(
+        String,
+        ForeignKey("audit.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # Relationships
+    batch = relationship("Batch", back_populates="audit_batches")
+    audit = relationship("Audit")
+
+    def __repr__(self) -> str:
+        return f"<AuditBatch batch={self.batch_id!r} audit={self.audit_id!r}>"
+
+
+# ---------------------------------------------------------------------------
 # Indexes
 # ---------------------------------------------------------------------------
 

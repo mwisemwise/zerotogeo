@@ -23,6 +23,43 @@ from typing import Optional, List, Dict, Any
 from bs4 import BeautifulSoup
 
 
+# ---------------------------------------------------------------------------
+# Free email provider detection
+# ---------------------------------------------------------------------------
+
+FREE_EMAIL_PROVIDERS = frozenset([
+    "gmail.com",
+    "yahoo.com",
+    "hotmail.com",
+    "outlook.com",
+    "aol.com",
+    "icloud.com",
+    "mail.com",
+    "protonmail.com",
+    "ymail.com",
+    "live.com",
+])
+
+
+@dataclass
+class ClassifiedEmail:
+    """An email address with its domain and classification."""
+    address: str
+    domain: str
+    classification: str  # "business_domain" or "free_provider"
+
+
+def classify_email(email: str) -> ClassifiedEmail:
+    """
+    Classify an email address as business_domain or free_provider.
+
+    Returns a ClassifiedEmail with the address, domain, and classification.
+    """
+    domain = email.lower().split("@")[-1]
+    classification = "free_provider" if domain in FREE_EMAIL_PROVIDERS else "business_domain"
+    return ClassifiedEmail(address=email, domain=domain, classification=classification)
+
+
 @dataclass
 class ExtractedData:
     """All signals extracted from a web page."""
@@ -77,6 +114,10 @@ class ExtractedData:
     has_address: bool = False
     has_email: bool = False
     has_contact_page: bool = False
+
+    # Email classification
+    classified_emails: List[ClassifiedEmail] = field(default_factory=list)
+    has_business_email: bool = False
 
     # Links
     internal_links: List[str] = field(default_factory=list)
@@ -307,6 +348,13 @@ def _extract_contact_signals(data: ExtractedData) -> None:
     emails = [e for e in emails if not any(x in e.lower() for x in ("example", "domain", "test"))]
     data.email_addresses = list(set(emails))[:5]
     data.has_email = bool(data.email_addresses)
+
+    # Classify emails as business_domain or free_provider
+    if data.email_addresses:
+        data.classified_emails = [classify_email(e) for e in data.email_addresses]
+        data.has_business_email = any(
+            ce.classification == "business_domain" for ce in data.classified_emails
+        )
 
     # Basic address detection: look for common address patterns
     addr_pattern = re.compile(

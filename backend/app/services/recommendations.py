@@ -262,6 +262,29 @@ def _findings_local_signals(pillar_data, extracted, business):
             priority="P1",
         ))
 
+    # Free email only (no business-domain email detected)
+    if extracted.has_email and not extracted.has_business_email:
+        free_emails = [ce.address for ce in extracted.classified_emails if ce.classification == "free_provider"]
+        findings.append(_finding(
+            pillar="local_signals",
+            severity="medium",
+            title="Free email address detected — no business-domain email",
+            finding_text=(
+                "All public email addresses on this website use a free email provider "
+                "(e.g. Gmail, Yahoo, Outlook). A business-domain email address "
+                "(e.g. info@yourbusiness.com) creates a stronger, more consistent connection "
+                "between the business identity and the website domain, reinforcing entity "
+                "credibility for both customers and AI systems."
+            ),
+            evidence=f"Email(s) found: {', '.join(free_emails[:3])}. No business-domain email detected.",
+            recommendation=(
+                "Set up an email address on your own domain (e.g. info@yourbusiness.com or "
+                "contact@yourbusiness.com). Most hosting providers include email, or you can "
+                "use Google Workspace or Microsoft 365 with your custom domain."
+            ),
+            priority="P2",
+        ))
+
     return findings
 
 
